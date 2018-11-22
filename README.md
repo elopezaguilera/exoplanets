@@ -36,7 +36,8 @@ The technical dependencies required for the below work are as follows:
  - matplotlib 2.1.0
  - numpy 1.14.5
  - seaborn 0.8
- - tensorflow-probability
+ - tensorflow-probability 0.3.0
+ - tensorflow 1.12.0 
  
 ## Data
  
@@ -549,7 +550,6 @@ fig:plt[`:figure]`figsize pykw 9,3*n;
  }[n;xval;yval;valpreds;corvalprobs]each til n;
 plt[`:show][];
 ```
-
 
 ![Figure 7](img/confidence.png)  
 <small>_Figure 7: Confidence in the predictions of the Bayesian Neural Network._</small>

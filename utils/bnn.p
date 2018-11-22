@@ -2,6 +2,8 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 tfd = tf.contrib.distributions
 

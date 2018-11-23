@@ -64,7 +64,7 @@ The TCEs are spread across 4 different sectors, each of which is processed separ
 The following table gathers all required information provided by the validation process about the TCEs found in sector 1 as well as their labels:
 
 ```q
-5#tces:("SJIIFFFI";(),csv)0:`:../../data/sector1/tces/tceinfo.csv   
+q)5#tces:("SJIIFFFI";(),csv)0:`:../../data/sector1/tces/tceinfo.csv   
 
 tceid       catid     n_planets tce_num tce_period tce_time0bk tce_duration planet
 ----------------------------------------------------------------------------------
@@ -80,17 +80,20 @@ Each TCE is identified by its id (*tceid*), which combines the star where it was
 When dealing with a classification problem, an important aspect of the dataset is the distribution of classes in the data. It was introduced before that many false positives are detected in the data validation stage, moreover, the number of provided false positives is much larger than the number of planets, which gives a quite unbalanced dataset as we can see by looking at the label distribution:
 
 ```q
-show dis:select n:count i by planet from tces
+/ Load utility functions
+q)\l ../utils/utils.q
 
-planet| n   
-------| ----
-0     | 4109
-1     | 919
+q)show dis:update pcnt:round[;0.01]100*num%sum num from select num:count i by planet from tces
 
-sns:.p.import`seaborn
-plt:.p.import`matplotlib.pyplot
-sns[`:barplot][`FP`PL;exec n from dis][`:set_title]"Proportion of false positives and planets";
-plt[`:show][];
+planet| num  pcnt 
+------| ----------
+0     | 4109 81.72
+1     | 919  18.28
+
+q)sns:.p.import`seaborn
+q)plt:.p.import`matplotlib.pyplot
+q)sns[`:barplot][`FP`PL;exec num from dis][`:set_title]"Proportion of false positives and planets";
+q)plt[`:show][];
 ```
 
 ![Figure 1](img/barplot.png)  
@@ -101,7 +104,7 @@ Less than 20% of the TCEs are actually planets (a similar distribution is found 
 Before looking at the light curves, we will split the TCEs into training and test sets. To monitor training and inform hyper-parameter tuning, we will also include a validation set.
 
 ```q
-show tcessplit:`trn`val`tst!(0,"j"$.8 .9*numtces)_neg[numtces:count tces]?tces
+q)show tcessplit:`trn`val`tst!(0,"j"$.8 .9*numtces)_neg[numtces:count tces]?tces
   
 trn| +`tceid`catid`n_planets`tce_num`tce_period`tce_time0bk`tce_duration`plan..
 val| +`tceid`catid`n_planets`tce_num`tce_period`tce_time0bk`tce_duration`plan..
@@ -113,30 +116,20 @@ tst| +`tceid`catid`n_planets`tce_num`tce_period`tce_time0bk`tce_duration`plan..
 The local view associated with each TCE can be extracted from the light curve using the *period, epoch* and *duration*.
 
 ```q
-tsopdir:`:/home/nasafdl/data/tsop301/sector1
-\l ../utils/extractlocal.q
+q)tsopdir:`:/home/nasafdl/data/tsop301/sector1
+q)\l ../utils/extractlocal.q
 
-trnpro:processtce[tsopdir]each trnlabels:tcessplit`trn
-trndata:flip(`$string tcessplit[`trn]`catid)!trnpro@\:`local
+q)trnpro:processtce[tsopdir]each trnlabels:tcessplit`trn
+q)trndata:reverse fills reverse fills flip(`$string tcessplit[`trn]`catid)!trnpro@\:`local
 
-valpro:processtce[tsopdir]each vallabels:tcessplit`val
-valdata:flip(`$string tcessplit[`val]`catid)!valpro@\:`local
+q)valpro:processtce[tsopdir]each vallabels:tcessplit`val
+q)valdata:reverse fills reverse fills flip(`$string tcessplit[`val]`catid)!valpro@\:`local
 
-
-tsopdir:`:/home/nasafdl/data/tsop301/sector1
-\l ../utils/extractlocal.q
-
-trnpro:processtce[tsopdir]each trnlabels:tcessplit`trn
-trndata:flip(`$string tcessplit[`trn]`catid)!trnpro@\:`local
-
-valpro:processtce[tsopdir]each vallabels:tcessplit`val
-valdata:flip(`$string tcessplit[`val]`catid)!valpro@\:`local
-
-tstpro:processtce[tsopdir]each tstlabels:tcessplit`tst
-tstdata:flip(`$string tcessplit[`tst]`catid)!tstpro@\:`local
+q)tstpro:processtce[tsopdir]each tstlabels:tcessplit`tst
+q)tstdata:flip(`$string tcessplit[`tst]`catid)!tstpro@\:`local
 
 
-5#trndata
+q)5#trndata
 
 280051467_1 352480413_1 456593119_1 358510596_1  183642345_2 261657455_1 2653..
 -----------------------------------------------------------------------------..
@@ -147,7 +140,7 @@ tstdata:flip(`$string tcessplit[`tst]`catid)!tstpro@\:`local
 0.2997477   0.3955775   0.09130886  0.006680667  0.2031908   0.1432165   0.03..
 
 
-5#trnlabels
+q)5#trnlabels
 
 tceid       catid     n_planets tce_num tce_period tce_time0bk tce_duration planet
 ----------------------------------------------------------------------------------
@@ -163,8 +156,8 @@ Since there is overlapping between sectors, we prepend the sector number to the 
 
 ```q
 
-addsect:{(`$"_" sv/: string y,'cols x)xcol x}
-5#trndata:addsect[trndata;`1]
+q)addsect:{(`$"_" sv/: string y,'cols x)xcol x}
+q)5#trndata:addsect[trndata;`1]
 
 1_280051467_1 1_352480413_1 1_456593119_1 1_358510596_1 1_183642345_2 1_26165..
 -----------------------------------------------------------------------------..
@@ -178,13 +171,13 @@ To get a better understanding of what light curves are like, we can plot a rando
 
 ```q
 
-sample:16?update tce_duration%24 from tces
+q)sample:16?update tce_duration%24 from tces
 
-plt:.p.import`matplotlib.pyplot
-subplots:plt[`:subplots][4;4]
-fig:subplots[@;0]
-axarr:subplots[@;1]
-fig[`:set_size_inches;18.5;10.5];
+q)plt:.p.import`matplotlib.pyplot
+q)subplots:plt[`:subplots][4;4]
+q)fig:subplots[@;0]
+q)axarr:subplots[@;1]
+q)fig[`:set_size_inches;18.5;10.5];
 {[i]
   j:cross[til 4;til 4]i;
   box:axarr[@;j 0][@;j 1];
@@ -192,7 +185,7 @@ fig[`:set_size_inches;18.5;10.5];
   box[`:axis]`off;
   box[`:set_title]"ID: ",string sample[i]`catid;
  }each til 16;
-plt[`:show][];
+q)plt[`:show][];
 ```
 
 ![Figure 2](img/localviews.png)  
@@ -207,72 +200,72 @@ Having performed the previous steps for each sector, we combine the data to crea
 * **Training data**:
 
 ```q
-count cols trndata
+q)count cols trndata
 15662
 
-select n:count i by planet from trnlabels
-planet| n    
-------| -----
-0     | 12560
-1     | 3102
+q)update pcnt:round[;0.01]100*num\%sum num from select num:count i by planet from trnlabels
+planet| num   pcnt 
+------| -----------
+0     | 12560 80.19
+1     | 3102  19.81
 ```
 
 * **Validation data**:
 ```q
-count cols valdata
+q)count cols valdata
 1958
 
-select n:count i by planet from vallabels
-planet| n   
-------| ----
-0     | 1558
-1     | 400
+q)update pcnt:round[;0.01]100*num\%sum num from select num:count i by planet from vallabels
+planet| num  pcnt 
+------| ----------
+0     | 1558 79.57
+1     | 400  20.43
 ```
 
 * **Test data**:
 ```q
-count cols tstdata
+q)count cols tstdata
 1957
 
-select n:count i by planet from tstlabels
-planet| n   
-------| ----
-0     | 1574
-1     | 383
+q)update pcnt:round[;0.01]100*num%sum num from select num:count i by planet from tstlabels
+planet| num  pcnt 
+------| ----------
+0     | 1574 80.43
+1     | 383  19.57
 ```
 
 We flip the data and drop column names, to create a matrix where each row represents a unique TCEs. We also extract the labels as vectors:
 
 ```q
-xtrain:value flip trndata
-ytrain:trnlabels`planet
+q)xtrain:value flip trndata
+q)ytrain:trnlabels`planet
 
-xval:value flip valdata
-yval:vallabels`planet
+q)xval:value flip valdata
+q)yval:vallabels`planet
 
-xtest:value flip tstdata
-ytest:tstlabels`planet
+q)xtest:value flip tstdata
+q)ytest:tstlabels`planet
 ```
 
 Training, validation and test sets fairly reproduce the proportion of planets in the whole dataset, where 20\% of the TCEs are actually planets. This ratio could be an issue when training a model, since planets would have low importance in the gradient when updating the network weights. To mitigate this problem, we oversample the positive class. We add a random sample of planets to the training set, so that the final proportion of planets vs non-planets will be 50\%-50\%. Now, we can create the final balanced training set easier:
 
 ```q
-show p0:avg ytrain
+q)show p0:avg ytrain
 0.198059
 
 / Final proportion of planets vs non planets
-p1:0.5
+q)p1:0.5
 
-sample:(nadd:(-) . sum each ytrain=/:(0 1))?xtrain where ytrain
+q)sample:(nadd:(-) . sum each ytrain=/:(0 1))?xtrain where ytrain
 
-xoversampled:xtrain,sample
-yoversampled:ytrain,nadd#1
+q)xoversampled:xtrain,sample
+q)yoversampled:ytrain,nadd#1
 
-ind:neg[n]?til n:count yoversampled
-finalxtrain:xoversampled ind
-finalytrain:yoversampled ind
+q)ind:neg[n]?til n:count yoversampled
+q)finalxtrain:xoversampled ind
+q)finalytrain:yoversampled ind
 
-count finalytrain
+q)count finalytrain
 25120
 ```
 
@@ -287,8 +280,8 @@ The model chosen as a benchmark is a linear classifier, which considers a linear
 SGDClassifier is imported from sklearn using embedPy and trained on the training dataset in order to find the weights of the linear combination that better separate classes:
 
 ```q
-sgd:.p.import[`sklearn.linear_model][`:SGDClassifier][]
-sgd[`:fit][finalxtrain;finalytrain];
+q)sgd:.p.import[`sklearn.linear_model][`:SGDClassifier][]
+q)sgd[`:fit][finalxtrain;finalytrain];
 ```
 We do not optimize the parameters, so the validation set as well as the test set are used to test the performance of the model.
 
@@ -300,24 +293,24 @@ We do not optimize the parameters, so the validation set as well as the test set
 Predictions can be easily obtained once the model is trained by only calling the predict method:
 
 ```q
-show valpreds:sgd[`:predict;xval]`
+q)show valpreds:sgd[`:predict;xval]`
 0 0 0 0 0 0 0 1 0 1 0 0 0 0 0 1 1 0 0 0 0 0 0 0 1 1 0 1 0 0 1 1 0 1 1 0 1 1 1..
 ```
 Accuracy is usually computed to test performance of a model, however, this is not always a good measure of the performance of the model, especially when dealing with unbalanced datasets due to a classifier always predicting the majority class would achieve a high accuracy too. Precision and recall are better choices in these cases since they allow to differentiate between models that prioritize false positives over false negatives and to make a decision about the best model based on the objective of the particular problem. The confusion matrix is also very useful because results can be better visualized:
 
 
 ```q
-\l ../utils/functions.q
+q)\l ../utils/functions.q
 
-accuracy[yval;valpreds]
+q)accuracy[yval;valpreds]
 0.7793667
-precision[1;yval;valpreds]
+q)precision[1;yval;valpreds]
 0.4766082
-sensitivity[1;yval;valpreds]
+q)sensitivity[1;yval;valpreds]
 0.815
 
-cm:confmat[1;yval;valpreds]
-displayCM[value cm;`planet`noplanet;"Confusion matrix";()]
+q)cm:confmat[1;yval;valpreds]
+q)displayCM[value cm;`planet`noplanet;"Confusion matrix";()]
 ```
 ![Figure 3](img/valbench.png)  
 <small>_Figure 3: Confusion matrix of the benchamark model with the validation set._</small>
@@ -329,18 +322,18 @@ The linear classifier is able to detect a high proportion of planets (75\%), how
 Results are also obtained using the test set, which will also allow us to compare results afterwards:
 
 ```q
-show testpreds:sgd[`:predict;xtest]`
+q)show testpreds:sgd[`:predict;xtest]`
 1 1 0 0 0 0 1 0 0 1 0 0 1 1 0 0 1 0 0 0 0 0 0 1 0 0 0 1 0 0 0 0 1 0 0 1 0 0 1..
 
-accuracy[ytest;testpreds]
+q)accuracy[ytest;testpreds]
 0.7726111
-precision[1;ytest;testpreds]
+q)precision[1;ytest;testpreds]
 0.4534535
-sensitivity[1;ytest;testpreds]
+q)sensitivity[1;ytest;testpreds]
 0.7885117
 
-cm:confmat[1;ytest;testpreds]
-displayCM[value cm;`planet`noplanet;"BNN confusion matrix";()]
+q)cm:confmat[1;ytest;testpreds]
+q)displayCM[value cm;`planet`noplanet;"BNN confusion matrix";()]
 ```
 ![Figure 4](img/testbench.png)  
 <small>_Figure 1: Confusion matrix of the benchamark model with the test set._</small>
@@ -355,9 +348,8 @@ Machine learning models usually depend on several parameters that need to be opt
 
 
 ```q
-paramdict:`lr`mxstep`layersize`activation`batchsize`nmontecarlo`trainsize!(0.01;10000;128 128;`relu;512;500;count finalytrain)
-
-paramdict
+q)paramdict:`lr`mxstep`layersize`activation`batchsize`nmontecarlo`trainsize!(0.01;10000;128 128;`relu;512;500;count finalytrain)
+q)paramdict
 
 lr         | 0.01
 mxstep     | 10000
@@ -374,13 +366,13 @@ Before training the model, we need to split the data into batches. In order to d
 * *builditerator*: creates an iterator of size 1, which captures the whole set. 
 
 ```q
-tf:.p.import`tensorflow
-np:.p.import[`numpy]
-array:np[`:array]
-pylist:.p.import[`builtins]`:list
-tuple:.p.import[`builtins]`:tuple
+q)tf:    .p.import`tensorflow
+q)np:    .p.import[`numpy]
+q)pylist:.p.import[`builtins]`:list
+q)tuple: .p.import[`builtins]`:tuple
+q)array:np[`:array]
 
-buildtraining:{[x;y;size]       
+q)buildtraining:{[x;y;size]       
  dataset:tf[`:data.Dataset.from_tensor_slices]tuple(np[`:float32;x]`.;np[`:int32;y]`.);
  batches:dataset[`:repeat][][`:batch]size;
  iterator:batches[`:make_one_shot_iterator][];
@@ -391,7 +383,7 @@ buildtraining:{[x;y;size]
  `local`labels`handle`iterator!{x`.}each raze(data;handle;iterator)
  }
 
-builditerator:{[x;y;size]
+q)builditerator:{[x;y;size]
  dataset:tf[`:data.Dataset.from_tensor_slices]tuple(np[`:float32;x]`.;np[`:int32;y]`.);
  frozen:dataset[`:take][size][`:repeat][][`:batch]size;
  frozen[`:make_one_shot_iterator][]
@@ -401,15 +393,15 @@ builditerator:{[x;y;size]
 An iterator with batches of size 512 is created using the training set while validation and test sets are converted to iterators of size 1 so they are represented in the same way as the training set and can be passed to the neural network and obtain predictions.
 
 ```q
-traindict:buildtraining[finalxtrain;finalytrain;paramdict`batchsize]
-iterators:`val`test!{x`.}each builditerator ./:((xval;yval;count yval);(xtest;ytest;count ytest))
+q)traindict:buildtraining[finalxtrain;finalytrain;paramdict`batchsize]
+q)iterators:`val`test!{x`.}each builditerator ./:((xval;yval;count yval);(xtest;ytest;count ytest))
 ```
 
 Finally, we can pass this data to the python process running in q and load the script that contains the model and the code to train it:
 
 ```q
-{.p.set[x]get x}each`paramdict`traindict`iterators;
-\l ../utils/bnn.p
+q){.p.set[x]get x}each`paramdict`traindict`iterators;
+q)\l ../utils/bnn.p
 ```
 
 ### Predictions
@@ -426,46 +418,45 @@ To obtain the montecarlo sample for each TCE in the validation set, the validati
 
 
 ```q
-p)val_handle = sess.run(iterators['val'].string_handle())
-p)probs=[sess.run((labels_distribution.probs),feed_dict={handle:val_handle}) for _ in range(paramdict['nmontecarlo'])]
-valprobs:`float$.p.get[`probs]`
+q)p)val_handle = sess.run(iterators['val'].string_handle())
+q)p)probs=[sess.run((labels_distribution.probs),feed_dict={handle:val_handle}) for _ in range(paramdict['nmontecarlo'])]
+q)valprobs:`float$.p.get[`probs]`
 ```
 
 Variable *valprobs* contains the montecarlo sample of the probabilities provided by the Bayesian neural network. We correct these probabilities for the oversampling, creating the right distribution of the data.
 
 
 ```q
-corprobs:{[p0;p1;p]
+q)corprobs:{[p0;p1;p]
  1%1+(((1%p0)-1)%(1%p1)-1)*(1%p)-1
  }
 
-corvalprobs:{[p0;p1;p;i].[p;(::;::;i);corprobs . $[i=0;(1-p0;1-p1);(p0;p1)]]}[p0;p1]/[valprobs;0 1]
+q)corvalprobs:{[p0;p1;p;i].[p;(::;::;i);corprobs . $[i=0;(1-p0;1-p1);(p0;p1)]]}[p0;p1]/[valprobs;0 1]
 ```
 
 Once corrected probabilities have been recovered, we compute the mean of the probabilities of each class and predict the instances as the class associated with the maximum mean probability:
 
 ```q
-show valpreds:{x?max x}each avg corvalprobs
+q)show valpreds:{x?max x}each avg corvalprobs
 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 1 1 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0 0..
 ```
 
 The accuracy of the predictions is tested and compared to the results provided by the pipeline using different metrics. 
 
 ```q
-
-accuracy[yval;valpreds]
+q)accuracy[yval;valpreds]
 0.9101124
-precision[1;yval;valpreds]
+q)precision[1;yval;valpreds]
 0.8294118
-sensitivity[1;yval;valpreds]
+q)sensitivity[1;yval;valpreds]
 0.705
 ```
 
 These results can be better visualized with the confusion matrix again:
 
 ```q
-cm:confmat[1;yval;valpreds]
-displayCM[value cm;`planet`noplanet;"Confusion matrix";()]
+q)cm:confmat[1;yval;valpreds]
+q)displayCM[value cm;`planet`noplanet;"Confusion matrix";()]
 ```
 
 ![Figure 5](img/valcm.png)  
@@ -484,28 +475,28 @@ To obtain the prediction of the test set we do exactly the same as we did with t
 
 
 ```q
-p)test_handle = sess.run(iterators['test'].string_handle())
-p)probs=[sess.run((labels_distribution.probs),feed_dict={handle:test_handle}) for _ in range(paramdict['nmontecarlo'])]
-testprobs:`float$.p.get[`probs]`
+q)p)test_handle = sess.run(iterators['test'].string_handle())
+q)p)probs=[sess.run((labels_distribution.probs),feed_dict={handle:test_handle}) for _ in range(paramdict['nmontecarlo'])]
+q)testprobs:`float$.p.get[`probs]`
 
-cortestprobs:{[p0;p1;p;i].[p;(::;::;i);corprobs . $[i=0;(1-p0;1-p1);(p0;p1)]]}[p0;p1]/[testprobs;0 1]
+q)cortestprobs:{[p0;p1;p;i].[p;(::;::;i);corprobs . $[i=0;(1-p0;1-p1);(p0;p1)]]}[p0;p1]/[testprobs;0 1]
 
-show testpreds:{x?max x}each avg cortestprobs
+q)show testpreds:{x?max x}each avg cortestprobs
 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 0 0 1..
 ```
 
 And results are also tested using the same metrics and confusion matrix:
 
 ```q
-accuracy[ytest;testpreds]
+q)accuracy[ytest;testpreds]
 0.9095554
-precision[1;ytest;testpreds]
+q)precision[1;ytest;testpreds]
 0.8280255
-sensitivity[1;ytest;testpreds]
+q)sensitivity[1;ytest;testpreds]
 0.6788512
 
-cm:confmat[1;ytest;testpreds]
-displayCM[value cm;`planet`noplanet;"BNN confusion matrix";()]
+q)cm:confmat[1;ytest;testpreds]
+q)displayCM[value cm;`planet`noplanet;"BNN confusion matrix";()]
 ```
 
 
@@ -526,11 +517,11 @@ We can check this confidence by plotting the distribution of the montecarlo samp
 
 ```q
 
-n:5
-sns:.p.import`seaborn
-fig:plt[`:figure]`figsize pykw 9,3*n;
+q)n:5
 
-{[n;xval;yval;pred;p;i]
+q)fig:plt[`:figure]`figsize pykw 9,3*n;
+
+q){[n;xval;yval;pred;p;i]
  ind:rand count yval;
  ax:fig[`:add_subplot][n;3;1+3*i];
  ax[`:plot]xval ind;
@@ -548,7 +539,7 @@ fig:plt[`:figure]`figsize pykw 9,3*n;
  ax[`:set_ylim]0 1;
  ax[`:set_title]"Predictive probs";
  }[n;xval;yval;valpreds;corvalprobs]each til n;
-plt[`:show][];
+q)plt[`:show][];
 ```
 
 ![Figure 7](img/confidence.png)  
@@ -560,18 +551,18 @@ plt[`:show][];
 Finally, we can show the local views of some TCEs and their predictions to see how the neural network classifies them:
 
 ```q
-subplots:plt[`:subplots][4;4]
-fig:subplots[@;0]
-axarr:subplots[@;1]
-fig[`:set_size_inches;18.5;10.5];
-{[i]
+q)subplots:plt[`:subplots][4;4]
+q)fig:subplots[@;0]
+q)axarr:subplots[@;1]
+q)fig[`:set_size_inches;18.5;10.5];
+q){[i]
   j:cross[til 4;til 4]i;
   box:axarr[@;j 0][@;j 1];
   box[`:plot]xtest ind:rand count ytest;
   box[`:axis]`off;
   box[`:set_title]"Actual/Prediction:",string[ytest ind],"/",string testpreds ind;
  }each til 16;
-plt[`:show][];
+q)plt[`:show][];
 ```
 
 ![Figure 8](img/actpred.png)  

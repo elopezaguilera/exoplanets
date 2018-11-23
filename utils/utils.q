@@ -1,4 +1,5 @@
 shape:{-1_count each first scan x}
+round:{y*"j"$x%y}
 accuracy:{avg x=y}
 confmat:{d:$[b:x~(::);asc distinct y,z;10b];0^(d!(n;n:count d)#0),exec(count each group c2)d by c1 from $[b;;x=]([]c1:y;c2:z)} / confusion matrix. x is the positive class,y should be the actual classes and z the predictions
 confdict:{`tp`fn`fp`tn!raze value confmat[x;y;z]} / number of TP,FN,FP,TN.

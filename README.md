@@ -16,15 +16,15 @@ NASA FDL 2018 focused on four areas of research - Space Resources, Exoplanets, S
 
 ## The TESS Mission
 
-The Transiting Exoplanet Survey Satellite (TESS) was launched in April 2018, with the objective of discovering new exoplanets in orbit around the brightest stars in the solar neighborhood.
+The Transiting Exoplanet Survey Satellite (TESS) was launched in April 2018, with the objective of discovering new exoplanets in orbit around the brightest stars in the solar neighborhood [1].
 
 For the two year mission, the sky was segmented into 26 sectors, each of which will be the focus of investigation for 27 days. TESS will spend the first year exploring the 13 sectors that cover the Southern Hemisphere, before rotating to explore the Northern Hemisphere during year two.
 
-Pictures will be taken, at a given frequency, to create a Satellite Image Time Series (SITS) for each sector.  Once collected, SITS are passed through a highly complex data-processing pipeline, developed by NASA. During the first stage, calibration finds the optimal set of pixels representing each target star. Aggregate brightness is extracted from the sequence and the pixels associated with each star, to create a light curve (time series) for each target star. The raw light curve is processed to remove: noise, trends and other factors introduced by the satellite itself. The final result is the corrected flux from the star, referred to from now on as a light curve.
+Pictures will be taken, at a given frequency, to create a Satellite Image Time Series (SITS) for each sector.  Once collected, SITS are passed through a highly complex data-processing pipeline, developed by NASA [2]. During the first stage, calibration finds the optimal set of pixels representing each target star. Aggregate brightness is extracted from the sequence and the pixels associated with each star, to create a light curve (time series) for each target star. The raw light curve is processed to remove: noise, trends and other factors introduced by the satellite itself. The final result is the corrected flux from the star, referred to from now on as a light curve.
 
 Light curves are the subject of study when attempting to detect exoplanets. Variations in brightness of the target stars may indicate the presence of a transiting planet. The preprocessing pipeline searches for signals consistent with transiting planets, in order to identify planet candidates or Threshold Crossing Events (TCEs). However, the list of TCEs will likely contain a large number of false positives, caused by eclipsing binary systems, background eclipsing binaries or simple noise.
 
-At this stage, machine learning (ML) comes into play. In this paper we propose a Bayesian Neural Network to try and classify the extracted TCEs as real planets or false positives. We will take advantage of the strength of kdb+/q to deal with time-series data and embedPy to import the necessary python ML libraries.
+At this stage, machine learning (ML) comes into play. In this paper we propose a Bayesian Neural Network [3] to try and classify the extracted TCEs as real planets or false positives. We will take advantage of the strength of kdb+/q to deal with time-series data and embedPy to import the necessary python ML libraries.
 
 
 The technical dependencies required for the below work are as follows:
@@ -41,7 +41,7 @@ The technical dependencies required for the below work are as follows:
  
 ## Data
  
- TESS had yet to produce data during FDL 2018, so data from 4 different sectors was simulated by NASA. 16,000 stars were generated for each sector and planets were placed around some stars following well known planet models. Eclipsing binaries and background eclipsing binaries were also injected into the simulation, and noise was added to the data.
+ TESS had yet to produce data during FDL 2018, so data from 4 different sectors was simulated by NASA (Simulated data was very similar to the ETE-6 TESS Simulated Data [4]). 16,000 stars were generated for each sector and planets were placed around some stars following well known planet models. Eclipsing binaries and background eclipsing binaries were also injected into the simulation, and noise was added to the data.
 
 The generated data was given to the pipeline to extract the 64,000 light curves and identify TCEs. Strong signals were found in 9,139 light curves, which were passed to the data validation stage for further analysis. The light curve for each TCE was reprocessed to look for multiple signals in the same curve and allow identification of multiplanetary systems. The result was a total of 19,577 planet candidates identified over 9,139 stars.
 
@@ -64,7 +64,7 @@ The TCEs are spread across 4 different sectors, each of which is processed separ
 The following table gathers all required information provided by the validation process about the TCEs found in sector 1 as well as their labels:
 
 ```q
-q)5#tces:("SJIIFFFI";(),csv)0:`:../../data/sector1/tces/tceinfo.csv   
+q)5#tces:("SJIIFFFI";(),csv)0:`:../data/sector1/tces/tceinfo.csv   
 
 tceid       catid     n_planets tce_num tce_period tce_time0bk tce_duration planet
 ----------------------------------------------------------------------------------
@@ -84,16 +84,10 @@ When dealing with a classification problem, an important aspect of the dataset i
 q)\l ../utils/utils.q
 
 q)show dis:update pcnt:round[;0.01]100*num%sum num from select num:count i by planet from tces
-
 planet| num  pcnt 
 ------| ----------
 0     | 4109 81.72
 1     | 919  18.28
-
-q)sns:.p.import`seaborn
-q)plt:.p.import`matplotlib.pyplot
-q)sns[`:barplot][`FP`PL;exec num from dis][`:set_title]"Proportion of false positives and planets";
-q)plt[`:show][];
 ```
 
 ![Figure 1](img/barplot.png)  
@@ -105,7 +99,6 @@ Before looking at the light curves, we will split the TCEs into training and tes
 
 ```q
 q)show tcessplit:`trn`val`tst!(0,"j"$.8 .9*numtces)_neg[numtces:count tces]?tces
-  
 trn| +`tceid`catid`n_planets`tce_num`tce_period`tce_time0bk`tce_duration`plan..
 val| +`tceid`catid`n_planets`tce_num`tce_period`tce_time0bk`tce_duration`plan..
 tst| +`tceid`catid`n_planets`tce_num`tce_period`tce_time0bk`tce_duration`plan..
@@ -167,7 +160,7 @@ q)5#trndata:addsect[trndata;`1]
 0.2873107     0.2509516     0.09310736    0.006680667   0.2189751     0.30785..
 0.2997477     0.3955775     0.09130886    0.006680667   0.2031908     0.14321..
 ```
-To get a better understanding of what light curves are like, we can plot a random selection using matplotlib via embedPy:
+To get a better understanding of what light curves are like, we can plot a random selection using matplotlib via embedPy [5]:
 
 ```q
 
@@ -200,8 +193,7 @@ Having performed the previous steps for each sector, we combine the data to crea
 * **Training data**:
 
 ```q
-q)count cols trndata
-15662
+Training data contains 15662 TCEs:
 
 q)update pcnt:round[;0.01]100*num\%sum num from select num:count i by planet from trnlabels
 planet| num   pcnt 
@@ -212,8 +204,7 @@ planet| num   pcnt
 
 * **Validation data**:
 ```q
-q)count cols valdata
-1958
+Validation data contains 1958 TCEs:
 
 q)update pcnt:round[;0.01]100*num\%sum num from select num:count i by planet from vallabels
 planet| num  pcnt 
@@ -224,8 +215,7 @@ planet| num  pcnt
 
 * **Test data**:
 ```q
-q)count cols tstdata
-1957
+Test data contains 1957 TCEs:
 
 q)update pcnt:round[;0.01]100*num%sum num from select num:count i by planet from tstlabels
 planet| num  pcnt 
@@ -250,23 +240,27 @@ q)ytest:tstlabels`planet
 Training, validation and test sets fairly reproduce the proportion of planets in the whole dataset, where 20\% of the TCEs are actually planets. This ratio could be an issue when training a model, since planets would have low importance in the gradient when updating the network weights. To mitigate this problem, we oversample the positive class. We add a random sample of planets to the training set, so that the final proportion of planets vs non-planets will be 50\%-50\%. Now, we can create the final balanced training set easier:
 
 ```q
+/ Initial proportion of actual planets
 q)show p0:avg ytrain
-0.198059
+0.198058
 
 / Final proportion of planets vs non planets
 q)p1:0.5
 
 q)sample:(nadd:(-) . sum each ytrain=/:(0 1))?xtrain where ytrain
-
 q)xoversampled:xtrain,sample
 q)yoversampled:ytrain,nadd#1
-
 q)ind:neg[n]?til n:count yoversampled
 q)finalxtrain:xoversampled ind
 q)finalytrain:yoversampled ind
 
-q)count finalytrain
-25120
+Size of the final training set is 25120:
+
+planets| num   pcnt
+-------| ----------
+0      | 12560 50  
+1      | 12560 50
+
 ```
 
 ## Benchmark model
@@ -275,7 +269,7 @@ Our objective is to train a Bayesian neural network to identify dips in the ligh
 
 ### Model
 
-The model chosen as a benchmark is a linear classifier, which considers a linear combination of the features to make the predictions. The model tries to linearly separate classes and bases its decisions on that. 
+The model chosen as a benchmark is a linear classifier, which considers a linear combination of the features to make the predictions. The model tries to linearly separate classes and bases its decisions on that [6]. 
 
 SGDClassifier is imported from sklearn using embedPy and trained on the training dataset in order to find the weights of the linear combination that better separate classes:
 
@@ -284,7 +278,6 @@ q)sgd:.p.import[`sklearn.linear_model][`:SGDClassifier][]
 q)sgd[`:fit][finalxtrain;finalytrain];
 ```
 We do not optimize the parameters, so the validation set as well as the test set are used to test the performance of the model.
-
 
 ### Predictions
 
@@ -397,7 +390,7 @@ q)traindict:buildtraining[finalxtrain;finalytrain;paramdict`batchsize]
 q)iterators:`val`test!{x`.}each builditerator ./:((xval;yval;count yval);(xtest;ytest;count ytest))
 ```
 
-Finally, we can pass this data to the python process running in q and load the script that contains the model and the code to train it:
+Finally, we can pass this data to the python process running in q and load the script that contains the model and the code to train it [7]:
 
 ```q
 q){.p.set[x]get x}each`paramdict`traindict`iterators;
@@ -409,8 +402,6 @@ q)\l ../utils/bnn.p
 Predictions of the TCEs in the validation and test sets will be based on montecarlo samples of size 500 created by the trained Bayesian neural network. The model produces a probability of each TCE being of class 0 (non planet) or class 1 (planet).
 
 Probabilities are distorted since the network was trained on an oversampled dataset and they need to be corrected. After doing this, the predicted class is the one that gives larger average probability.
-Validation set
-
 
 #### Validation set
 
@@ -462,7 +453,16 @@ q)displayCM[value cm;`planet`noplanet;"Confusion matrix";()]
 ![Figure 5](img/valcm.png)  
 <small>_Figure 5: Confusion matrix of the Bayesian Neural Network with the validation set._</small>
 
-Attending to these metrics, results are very satisfactory, especially compared to the results obtained by the linear classifier. In addition to a high accuracy (91\%), the model gets 83\% precision, which is quite good since it filters most of the false positives detected by the pipeline, in fact, the confusion matrix shows that only 58 TCEs that do not represent a planet are classified as real planets. Furthermore, for unbalanced datasets achieving high precision usually means losing sensitivity, however, this score is still good, 70\%. 
+Attending to these metrics, results are very satisfactory, especially compared to the results obtained by the linear classifier. 
+
+```q
+model | acc       prec      sens 
+------| -------------------------
+bnn   | 0.9101124 0.8294118 0.705
+linear| 0.7793667 0.4766082 0.815
+```
+
+In addition to a high accuracy (91\%), the model gets 83\% precision, which is quite good since it filters most of the false positives detected by the pipeline, in fact, the confusion matrix shows that only 58 TCEs that do not represent a planet are classified as real planets. Furthermore, for unbalanced datasets achieving high precision usually means losing sensitivity, however, this score is still good, 70\%. 
 
 In case we are not happy with these results, we can tune the parameters of the model and try to get results that better fit our requirements. Models with different parameters should be tested on the validation set and once the preferred model is chosen, it can be tested on the test dataset.
 
@@ -499,13 +499,18 @@ q)cm:confmat[1;ytest;testpreds]
 q)displayCM[value cm;`planet`noplanet;"BNN confusion matrix";()]
 ```
 
-
 ![Figure 6](img/testcm.png)  
 <small>_Figure 6: Confusion matrix of the Bayesian Neural Network with the test set._</small>
 
 
 Although sensitivity is lower than obtained with the linear classifier, results still indicate that the network is able to deal with the low proportion of real planets and capture a high proportion of them (~70\%) by using oversampling. Moreover, even though getting both high recall and precision when dealing with unbalanced datasets is usually a complicated task, we can appreciate that the proposed solution achieves 89\% precision, which highly improves the precision score obtained with the benchmark model and leads to higher accuracy too (90\%). 
 
+```q
+model | acc       prec      sens     
+------| -----------------------------
+bnn   | 0.9095554 0.8280255 0.6788512
+linear| 0.7726111 0.4534535 0.7885117
+```
 
 ### Prediction Confidence
 
@@ -585,11 +590,14 @@ Esperanza López Aguilera joined First Derivatives in October 2017 as a Data Sci
 in the Capital Markets Training Program.
 
 
-
-
-
-
-
+## References
+[1] "TESS Web". https://tess.gsfc.nasa.gov/, accessed 26 November 2018.
+[2] "Kepler Data Processing Handbook". https://archive.stsci.edu/kepler/manuals/KSCI-19081-002-KDPH.pdf, accessed 26 November 2018.
+[3] Ask Jas about a good paper to include as reference to BNN.
+[4] "ETE-6 TESS Simulated Data Products Home", https://archive.stsci.edu/tess/ete-6.html, accessed 26 November 2018.
+[5] "EmbedPy documentation", https://code.kx.com/q/ml/embedpy/, accessed 26 November 2018.
+[6] Include a paper to reference linear model?
+[7] "TensorFlow Probability", https://github.com/tensorflow/probability, accessed 26 November 2018.
 
 
 

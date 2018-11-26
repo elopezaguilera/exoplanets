@@ -20,11 +20,11 @@ The Transiting Exoplanet Survey Satellite (TESS) was launched in April 2018, wit
 
 For the two year mission, the sky was segmented into 26 sectors, each of which will be the focus of investigation for 27 days. TESS will spend the first year exploring the 13 sectors that cover the Southern Hemisphere, before rotating to explore the Northern Hemisphere during year two.
 
-Pictures will be taken, at a given frequency, to create a Satellite Image Time Series (SITS) for each sector.  Once collected, SITS are passed through a highly complex data-processing pipeline, developed by NASA [2]. During the first stage, calibration finds the optimal set of pixels representing each target star. Aggregate brightness is extracted from the sequence and the pixels associated with each star, to create a light curve (time series) for each target star. The raw light curve is processed to remove: noise, trends and other factors introduced by the satellite itself. The final result is the corrected flux from the star, referred to from now on as a light curve.
+Pictures will be taken, at a given frequency, to create a Satellite Image Time Series (SITS) for each sector.  Once collected, SITS are passed through a highly complex data-processing pipeline, developed by NASA [2]. During the first stage, calibration finds the optimal set of pixels representing each target star. Aggregate brightness is then extracted from the sequence and the pixels associated with each star, to create a light curve (one-dimensional time-series) for each target star. The raw light curve is processed to remove noise, trends and other factors introduced by the satellite itself. The final result is the corrected flux from the star, referred to from now on as a light curve.
 
-Light curves are the subject of study when attempting to detect exoplanets. Variations in brightness of the target stars may indicate the presence of a transiting planet. The preprocessing pipeline searches for signals consistent with transiting planets, in order to identify planet candidates or Threshold Crossing Events (TCEs). However, the list of TCEs will likely contain a large number of false positives, caused by eclipsing binary systems, background eclipsing binaries or simple noise.
+Light curves are the main subject of study when attempting to detect exoplanets. Variations in brightness of the target stars may indicate the presence of a transiting planet. The preprocessing pipeline searches for signals consistent with transiting planets, in order to identify planet candidates or Threshold Crossing Events (TCEs). However, the list of TCEs will likely contain a large number of false positives, caused by eclipsing binary systems, background eclipsing binaries or simple noise.
 
-At this stage, machine learning (ML) comes into play. In this paper we propose a Bayesian Neural Network [3] to try and classify the extracted TCEs as real planets or false positives. We will take advantage of the strength of kdb+/q to deal with time-series data and embedPy [4] to import the necessary python ML libraries.
+At this stage, machine learning (ML) comes into play. In this paper we propose a Bayesian Neural Network [3] to try and classify the extracted TCEs as real planets or false positives. We will take advantage of the strength of kdb+/q to manipulate and analyze time-series data, and embedPy [4] to import the necessary python ML libraries.
 
 
 The technical dependencies required for the below work are as follows:
@@ -41,7 +41,7 @@ The technical dependencies required for the below work are as follows:
  
 ## Data
  
- TESS had yet to produce data during FDL 2018, so data from 4 different sectors was simulated by NASA (Simulated data was very similar to the ETE-6 TESS Simulated Data [5]). 16,000 stars were generated for each sector and planets were placed around some stars following well known planet models. Eclipsing binaries and background eclipsing binaries were also injected into the simulation, and noise was added to the data.
+TESS had yet to produce data during FDL 2018, so data from 4 different sectors was simulated by NASA [5]. 16,000 stars were generated for each sector and planets were placed around some stars following well known planet models. Eclipsing binaries and background eclipsing binaries were also injected into the simulation, and noise was added to the data.
 
 The generated data was given to the pipeline to extract the 64,000 light curves and identify TCEs. Strong signals were found in 9,139 light curves, which were passed to the data validation stage for further analysis. The light curve for each TCE was reprocessed to look for multiple signals in the same curve and allow identification of multiplanetary systems. The result was a total of 19,577 planet candidates identified over 9,139 stars.
 
@@ -52,8 +52,8 @@ An advantage of dealing with simulated data, is that we have the ground truth re
 In order to classify TCEs as either real planets or false positives, we consider the following data:
 
  1. **Ground truth**: data about the injected signals (i.e. real planet or false positive).
- 2. **Data validation data**: information about the TCEs found in the data validation stage.
- 3. **Light curves**: fits files containing the light curve of each star.
+ 2. **Validation data**: information about the TCEs found in the data validation stage.
+ 3. **Light curves**: light curves for each star, stored as Flexible Image Transport System (FITS) files
 
 ## Feature Engineering
 
@@ -77,7 +77,7 @@ tceid       catid     n_planets tce_num tce_period tce_time0bk tce_duratio
 
 Each TCE is identified by its id (*tceid*), which combines the star where it was found (*catid*) and the number that identifies the TCE (*tce_num*) in the set of TCEs (*n_planets*) detected in the star. Column planet indicates the label of the TCE, which takes value 1 (positive class) if the TCE represents a real planet and 0 (negative class) otherwise. Finally, period, epoch and duration are used to fold the light curve.
 
-When dealing with a classification problem, an important aspect of the dataset is the distribution of classes in the data. It was introduced before that many false positives are detected in the data validation stage, moreover, the number of provided false positives is much larger than the number of planets, which gives a quite unbalanced dataset as we can see by looking at the label distribution:
+When dealing with a classification problem, an important aspect of the dataset is the distribution of classes in the data. High sensitivity during the data validation stage led to many more false positives than planets. We can see this imbalance by looking at the label distribution:
 
 ```q
 / Load utility functions
@@ -203,6 +203,7 @@ planet| num   pcnt
 ```
 
 * **Validation data**:
+
 ```q
 Validation data contains 1958 TCEs:
 
@@ -214,6 +215,7 @@ planet| num  pcnt
 ```
 
 * **Test data**:
+
 ```q
 Test data contains 1957 TCEs:
 
@@ -244,7 +246,7 @@ Training, validation and test sets fairly reproduce the proportion of planets in
 q)show p0:avg ytrain
 0.198058
 
-/ Final proportion of planets vs non planets
+/ Final proportion of planets vs non-planets
 q)p1:0.5
 
 q)sample:(nadd:(-) . sum each ytrain=/:(0 1))?xtrain where ytrain
@@ -277,19 +279,21 @@ SGDClassifier is imported from sklearn using embedPy and trained on the training
 q)sgd:.p.import[`sklearn.linear_model][`:SGDClassifier][]
 q)sgd[`:fit][finalxtrain;finalytrain];
 ```
-We do not optimize the parameters, so the validation set as well as the test set are used to test the performance of the model.
+We do not optimize the parameters, so both the validation set and the test set are used to test the performance of the model.
 
 ### Predictions
 
 #### Validation set
 
-Predictions can be easily obtained once the model is trained by only calling the predict method:
+Once the model is trained, predictions can be obtained by calling the predict method:
 
 ```q
 q)show valpreds:sgd[`:predict;xval]`
 0 0 0 0 0 0 0 1 0 1 0 0 0 0 0 1 1 0 0 0 0 0 0 0 1 1 0 1 0 0 1 1 0 1 1 0 1 1 1..
 ```
-Accuracy is usually computed to test performance of a model, however, this is not always a good measure of the performance of the model, especially when dealing with unbalanced datasets due to a classifier always predicting the majority class would achieve a high accuracy too. Precision and recall are better choices in these cases since they allow to differentiate between models that prioritize false positives over false negatives and to make a decision about the best model based on the objective of the particular problem. The confusion matrix is also very useful because results can be better visualized:
+Accuracy is usually computed to test the performance of a model. However, this is not always a good measure of model performance, especially when dealing with unbalanced datasets. Precision and recall are often better choices in this case, since they differentiate between models that prioritize false positives over false negatives. This allows the best model to be selected, based on the objective of a particular problem.
+
+The confusion matrix is also very useful because results can be better visualized:
 
 
 ```q
@@ -397,7 +401,7 @@ q)\l ../utils/bnn.p
 
 ### Predictions
 
-Predictions of the TCEs in the validation and test sets will be based on montecarlo samples of size 500 created by the trained Bayesian neural network. The model produces a probability of each TCE being of class 0 (non planet) or class 1 (planet).
+Predictions of the TCEs in the validation and test sets will be based on montecarlo samples of size 500 created by the trained Bayesian neural network. The model produces a probability of each TCE being of class 0 (non-planet) or class 1 (planet).
 
 Probabilities are distorted since the network was trained on an oversampled dataset and they need to be corrected. After doing this, the predicted class is the one that gives larger average probability.
 

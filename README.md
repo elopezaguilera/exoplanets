@@ -24,7 +24,7 @@ Pictures will be taken, at a given frequency, to create a Satellite Image Time S
 
 Light curves are the subject of study when attempting to detect exoplanets. Variations in brightness of the target stars may indicate the presence of a transiting planet. The preprocessing pipeline searches for signals consistent with transiting planets, in order to identify planet candidates or Threshold Crossing Events (TCEs). However, the list of TCEs will likely contain a large number of false positives, caused by eclipsing binary systems, background eclipsing binaries or simple noise.
 
-At this stage, machine learning (ML) comes into play. In this paper we propose a Bayesian Neural Network [3] to try and classify the extracted TCEs as real planets or false positives. We will take advantage of the strength of kdb+/q to deal with time-series data and embedPy to import the necessary python ML libraries.
+At this stage, machine learning (ML) comes into play. In this paper we propose a Bayesian Neural Network [3] to try and classify the extracted TCEs as real planets or false positives. We will take advantage of the strength of kdb+/q to deal with time-series data and embedPy [4] to import the necessary python ML libraries.
 
 
 The technical dependencies required for the below work are as follows:
@@ -41,7 +41,7 @@ The technical dependencies required for the below work are as follows:
  
 ## Data
  
- TESS had yet to produce data during FDL 2018, so data from 4 different sectors was simulated by NASA (Simulated data was very similar to the ETE-6 TESS Simulated Data [4]). 16,000 stars were generated for each sector and planets were placed around some stars following well known planet models. Eclipsing binaries and background eclipsing binaries were also injected into the simulation, and noise was added to the data.
+ TESS had yet to produce data during FDL 2018, so data from 4 different sectors was simulated by NASA (Simulated data was very similar to the ETE-6 TESS Simulated Data [5]). 16,000 stars were generated for each sector and planets were placed around some stars following well known planet models. Eclipsing binaries and background eclipsing binaries were also injected into the simulation, and noise was added to the data.
 
 The generated data was given to the pipeline to extract the 64,000 light curves and identify TCEs. Strong signals were found in 9,139 light curves, which were passed to the data validation stage for further analysis. The light curve for each TCE was reprocessed to look for multiple signals in the same curve and allow identification of multiplanetary systems. The result was a total of 19,577 planet candidates identified over 9,139 stars.
 
@@ -160,7 +160,7 @@ q)5#trndata:addsect[trndata;`1]
 0.2873107     0.2509516     0.09310736    0.006680667   0.2189751     0.30785..
 0.2997477     0.3955775     0.09130886    0.006680667   0.2031908     0.14321..
 ```
-To get a better understanding of what light curves are like, we can plot a random selection using matplotlib via embedPy [5]:
+To get a better understanding of what light curves are like, we can plot a random selection using matplotlib via embedPy:
 
 ```q
 
@@ -224,7 +224,7 @@ planet| num  pcnt
 1     | 383  19.57
 ```
 
-We flip the data and drop column names, to create a matrix where each row represents a unique TCEs. We also extract the labels as vectors:
+We flip the data and drop column names, to create a matrix where each row represents a unique TCE. We also extract the labels as vectors:
 
 ```q
 q)xtrain:value flip trndata
@@ -293,8 +293,6 @@ Accuracy is usually computed to test performance of a model, however, this is no
 
 
 ```q
-q)\l ../utils/functions.q
-
 q)accuracy[yval;valpreds]
 0.7793667
 q)precision[1;yval;valpreds]
@@ -329,7 +327,7 @@ q)cm:confmat[1;ytest;testpreds]
 q)displayCM[value cm;`planet`noplanet;"BNN confusion matrix";()]
 ```
 ![Figure 4](img/testbench.png)  
-<small>_Figure 1: Confusion matrix of the benchamark model with the test set._</small>
+<small>_Figure 4: Confusion matrix of the benchamark model with the test set._</small>
 
 Results are similar to those obtained on the validation set.
 
@@ -503,7 +501,7 @@ q)displayCM[value cm;`planet`noplanet;"BNN confusion matrix";()]
 <small>_Figure 6: Confusion matrix of the Bayesian Neural Network with the test set._</small>
 
 
-Although sensitivity is lower than obtained with the linear classifier, results still indicate that the network is able to deal with the low proportion of real planets and capture a high proportion of them (~70\%) by using oversampling. Moreover, even though getting both high recall and precision when dealing with unbalanced datasets is usually a complicated task, we can appreciate that the proposed solution achieves 89\% precision, which highly improves the precision score obtained with the benchmark model and leads to higher accuracy too (90\%). 
+Although sensitivity is lower than obtained with the linear classifier, results still indicate that the network is able to deal with the low proportion of real planets and capture a high proportion of them (68\%) by using oversampling. Moreover, even though getting both high recall and precision when dealing with unbalanced datasets is usually a complicated task, we can appreciate that the proposed solution achieves 83\% precision, which highly improves the precision score obtained with the benchmark model and leads to higher accuracy too (90\%). 
 
 ```q
 model | acc       prec      sens     
@@ -523,7 +521,6 @@ We can check this confidence by plotting the distribution of the montecarlo samp
 ```q
 
 q)n:5
-
 q)fig:plt[`:figure]`figsize pykw 9,3*n;
 
 q){[n;xval;yval;pred;p;i]
@@ -597,11 +594,11 @@ in the Capital Markets Training Program.
 
 [3] Ask Jas about a good paper to include as reference to BNN.
 
-[4] "ETE-6 TESS Simulated Data Products Home", https://archive.stsci.edu/tess/ete-6.html, accessed 26 November 2018.
+[4] "EmbedPy documentation", https://code.kx.com/q/ml/embedpy/, accessed 26 November 2018.
 
-[5] "EmbedPy documentation", https://code.kx.com/q/ml/embedpy/, accessed 26 November 2018.
+[5] "ETE-6 TESS Simulated Data Products Home", https://archive.stsci.edu/tess/ete-6.html, accessed 26 November 2018.
 
-[6] Include a paper to reference linear model?
+[6] Include a paper to reference linear model
 
 [7] "TensorFlow Probability", https://github.com/tensorflow/probability, accessed 26 November 2018.
 

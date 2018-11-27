@@ -464,7 +464,7 @@ bnn   | 0.9101124 0.8294118 0.705
 linear| 0.7793667 0.4766082 0.815
 ```
 
-In addition to a high accuracy (91\%), the model gets 83\% precision, which is quite good since it filters most of the false positives detected by the pipeline, in fact, the confusion matrix shows that only 58 TCEs that do not represent a planet are classified as real planets. Furthermore, for unbalanced datasets achieving high precision usually means losing sensitivity, however, this score is still good, 70\%. 
+In addition to a high accuracy (91\%), the model gets 83\% precision, which is quite good since it filters most of the false positives detected by the pipeline. In fact, the confusion matrix shows that only 58 TCEs that do not represent a planet are classified as real planets. Furthermore, for unbalanced datasets achieving high precision usually means losing sensitivity, however, this score is still good, 70\%. 
 
 In case we are not happy with these results, we can tune the parameters of the model and try to get results that better fit our requirements. Models with different parameters should be tested on the validation set and once the preferred model is chosen, it can be tested on the test dataset.
 
@@ -517,7 +517,7 @@ linear| 0.7726111 0.4534535 0.7885117
 ### Prediction Confidence
 
 
-An advantage of Bayesian neural networks is their capacity to quantify confidence in predictions. They allow to get a distribution of the probabilities of each class and determine if the prediction for a given instance is nearly random or it is confident in it. 
+An advantage of Bayesian neural networks is their capacity to quantify confidence in predictions. They output a distribution of the probabilities for each class, indicating whether a given prediction is nearly random or if the model is confident in it. 
 
 We can check this confidence by plotting the distribution of the montecarlo samples of 5 random TCEs in the validation set.
 
@@ -581,7 +581,7 @@ We observe in these plots how the dip caused by a planet transit is different fr
 
 For a long time exoplanets were identified by humans looking at the light curves and deciding if the drops in brightness detected in the curves were caused by the transit of a planet. Thus, the process was very slow and it involved many resources devoted to this task. In this paper we have demonstrated how the problem can be approached and solved using kdb+ and embedPy.
 
-Data can be loaded and managed using q, which allows us to easily explore it and filter the required data. Once significative data from the TCEs is gathered, light curves are rapidly folded to emphasize drops in brightness by leveraging advantages provided by kdb+ to deal with time series. Then, a simple linear classifier to classify the TCEs is trained to be used as benchmark model.  Although the model is able to capture a high proportion of real planets, it is not able to filter false detections, which is the main goal to achieve. Therefore, a more complex model, a Bayesian neural network, is proposed to find a solution that fits our requirements. As the parameters of a network highly determine its performance, a dictionary of parameters is defined, which allows us to tune them easily and to find the set that provides the best performance on the validation dataset.  Then, the final solution is tested on the test set, which gets much better results than the benchmark model. Finally, an advantage of Bayesian neural networks is its capability to determine confidence in prediction, which we also compute since it can be really useful when analysing results.
+Data can be loaded and managed using q, which allows us to easily explore it and filter the required data. Once significative data from the TCEs is gathered, light curves are rapidly folded to emphasize drops in brightness by leveraging advantages provided by kdb+ to deal with time series. Then, a simple linear classifier to classify the TCEs is trained to be used as benchmark model.  Although the model is able to capture a high proportion of real planets, it is not able to filter false detections, which is the main goal to achieve. Therefore, a more complex model, a Bayesian neural network, is proposed to find a solution that fits our requirements. As the parameters of a network highly determine its performance, a dictionary of parameters is defined, which allows us to tune them easily and to find the set that provides the best performance on the validation dataset.  The final model is tested on the test set, and displays significant improvement over the benchmark. Finally, an advantage of Bayesian neural networks is their ability to determine confidence in predictions, which can be very useful when analysing results.
 
 To sum up, the proposed solution is able to achieve our main goal, detecting a high proportion of real planets in the set of planet candidates. Also, and more importantly, it achieves a high precision too, which would save a lot of money and time since further analysis of false detections is avoided. In addition, since confidence in predictions is also provided, some other criteria based on this confidence can be taken into account to decide when a planet candidate is worth further analysis. This possibility together with extra data preprocessing could be considered in future works to try and improve results. 
 

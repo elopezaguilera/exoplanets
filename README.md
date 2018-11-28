@@ -596,13 +596,13 @@ in the Capital Markets Training Program.
 
 [2] "Kepler Data Processing Handbook". https://archive.stsci.edu/kepler/manuals/KSCI-19081-002-KDPH.pdf, accessed 26 November 2018.
 
-[3] Ask Jas about a good paper to include as reference to BNN.
+[3] "Bayesian Neural Network and Density Networks". http://www.inference.org.uk/mackay/ch_learning.pdf, accessed 26 November 2018.
 
 [4] "EmbedPy documentation", https://code.kx.com/q/ml/embedpy/, accessed 26 November 2018.
 
 [5] "ETE-6 TESS Simulated Data Products Home", https://archive.stsci.edu/tess/ete-6.html, accessed 26 November 2018.
 
-[6] Include a paper to reference linear model
+[6] Include a paper to reference linear classifier
 
 [7] "TensorFlow Probability", https://github.com/tensorflow/probability, accessed 26 November 2018.
 

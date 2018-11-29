@@ -602,11 +602,9 @@ in the Capital Markets Training Program.
 
 [5] "ETE-6 TESS Simulated Data Products Home", https://archive.stsci.edu/tess/ete-6.html, accessed 26 November 2018.
 
-[6] Include a paper to reference linear classifier
+[6] "Prediction with Gaussian processes: from linear regression and beyond", http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.84.1226&rep=rep1&type=pdf, accessed 26 November 2018.
 
 [7] "TensorFlow Probability", https://github.com/tensorflow/probability, accessed 26 November 2018.
-
-
 
 
 

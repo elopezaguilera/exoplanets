@@ -310,7 +310,7 @@ q)displayCM[value cm;`planet`noplanet;"Confusion matrix";()]
 ![Figure 3](img/valbench.png)  
 <small>_Figure 3: Confusion matrix of the benchamark model with the validation set._</small>
 
-The linear classifier is able to detect a high proportion of planets (75\%), however, the precision of the model is low. We would like to maximize this. 
+The linear classifier is able to detect a high proportion of planets (82\%), however, the precision of the model is low. We would like to maximize this. 
 
 #### Test set
 
